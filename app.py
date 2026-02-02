@@ -267,7 +267,7 @@ def render_error_panel():
             
             with st.spinner("🧠 Loading Qwen 3 Coder agent..."):
                 try:
-                    from models.error_fixing_agent import get_error_agent
+                    from error_fixing_agent import get_error_agent
                     agent = get_error_agent()
                     
                     # Try to load the model (downloads on first use)
@@ -616,7 +616,7 @@ def render_sidebar():
         
         # Cloud Status - Load persistence
         if not st.session_state.get("cloud_job_id"):
-             from utils.storage import get_latest_cloud_job
+             from storage import get_latest_cloud_job
              last_job = get_latest_cloud_job()
              if last_job:
                  st.session_state.cloud_job_id = last_job["id"]
@@ -629,7 +629,7 @@ def render_sidebar():
             
             if st.button("🔄 Check Now"):
                 with st.spinner("Checking cloud..."):
-                    from utils.firebase_utils import get_job_status
+                    from firebase_utils import get_job_status
                     data = get_job_status(st.session_state.cloud_job_id)
                     if data:
                         st.session_state.cloud_status = data
@@ -668,7 +668,6 @@ def render_sidebar():
 
 
 def generate_video(prompt: str, settings: dict, status_placeholder):
-    """Generate video using selected engine."""
     
     # ----------------CLOUD MODE (HuggingFace Inference API)----------------
     if settings.get("mode") == "Cloud (Faster)":
@@ -691,7 +690,7 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
                 status_placeholder.markdown('<span class="status-badge status-ready">✅ Cloud Video Complete!</span>', unsafe_allow_html=True)
                 
                 # Save to history
-                from utils.storage import save_to_history
+                from storage import save_to_history
                 save_to_history(prompt, "huggingface_cloud", video_path, settings)
                 
                 return video_path
@@ -762,8 +761,7 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
                         f = f.clip(0, 255).astype(np.uint8)
                 elif f.dtype != np.uint8:
                     f = f.astype(np.uint8)
-                
-                # Ensure 3D array (H, W, C)
+
                 if f.ndim == 2:
                     f = np.stack([f, f, f], axis=-1)
                 
@@ -1233,4 +1231,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
