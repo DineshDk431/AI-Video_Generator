@@ -1,8 +1,3 @@
-"""
-AI Video Generator - Streamlit Application
-Generate AI videos from text prompts using HuggingFace models and Google VEO.
-Features: Subtitle overlay, LLM prompt refinement, multi-model support, quality selection.
-"""
 import streamlit as st
 import os
 import time
@@ -1238,6 +1233,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
