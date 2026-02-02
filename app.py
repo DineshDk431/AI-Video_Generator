@@ -1,3 +1,8 @@
+"""
+AI Video Generator - Streamlit Application
+Generate AI videos from text prompts using HuggingFace models and Google VEO.
+Features: Subtitle overlay, LLM prompt refinement, multi-model support, quality selection.
+"""
 import streamlit as st
 import os
 import time
@@ -7,7 +12,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # User authentication
-from user_auth import (
+from utils.user_auth import (
     is_logged_in, get_current_user, render_login_page, 
     render_profile_sidebar, logout
 )
@@ -267,7 +272,7 @@ def render_error_panel():
             
             with st.spinner("🧠 Loading Qwen 3 Coder agent..."):
                 try:
-                    from error_fixing_agent import get_error_agent
+                    from models.error_fixing_agent import get_error_agent
                     agent = get_error_agent()
                     
                     # Try to load the model (downloads on first use)
@@ -321,7 +326,7 @@ def render_error_panel():
 
 def capture_error(error_msg: str, context: dict = None):
     """Capture an error for display in the UI with auto-fix option."""
-    from error_fixing_agent import get_error_agent
+    from models.error_fixing_agent import get_error_agent
     
     st.session_state.current_error = str(error_msg)
     
@@ -616,7 +621,7 @@ def render_sidebar():
         
         # Cloud Status - Load persistence
         if not st.session_state.get("cloud_job_id"):
-             from storage import get_latest_cloud_job
+             from utils.storage import get_latest_cloud_job
              last_job = get_latest_cloud_job()
              if last_job:
                  st.session_state.cloud_job_id = last_job["id"]
@@ -629,7 +634,7 @@ def render_sidebar():
             
             if st.button("🔄 Check Now"):
                 with st.spinner("Checking cloud..."):
-                    from firebase_utils import get_job_status
+                    from utils.firebase_utils import get_job_status
                     data = get_job_status(st.session_state.cloud_job_id)
                     if data:
                         st.session_state.cloud_status = data
@@ -668,13 +673,14 @@ def render_sidebar():
 
 
 def generate_video(prompt: str, settings: dict, status_placeholder):
+    """Generate video using selected engine."""
     
     # ----------------CLOUD MODE (HuggingFace Inference API)----------------
     if settings.get("mode") == "Cloud (Faster)":
         status_placeholder.markdown('<span class="status-badge status-generating">☁️ Connecting to HuggingFace Cloud...</span>', unsafe_allow_html=True)
         
         try:
-            from hf_inference import generate_video_hf
+            from utils.hf_inference import generate_video_hf
             
             def hf_progress(msg):
                 status_placeholder.markdown(f'<span class="status-badge status-generating">☁️ {msg}</span>', unsafe_allow_html=True)
@@ -690,7 +696,7 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
                 status_placeholder.markdown('<span class="status-badge status-ready">✅ Cloud Video Complete!</span>', unsafe_allow_html=True)
                 
                 # Save to history
-                from storage import save_to_history
+                from utils.storage import save_to_history
                 save_to_history(prompt, "huggingface_cloud", video_path, settings)
                 
                 return video_path
@@ -715,7 +721,7 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
         model_name = model_id.split("/")[-1] if model_id else "text-to-video-ms-1.7b"
         status_placeholder.markdown(f'<span class="status-badge status-generating">⏳ Loading {model_name}...</span>', unsafe_allow_html=True)
         
-        from modelscope import get_modelscope_generator
+        from models.modelscope import get_modelscope_generator
         generator = get_modelscope_generator()
         
         # Set the user-selected model
@@ -761,7 +767,8 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
                         f = f.clip(0, 255).astype(np.uint8)
                 elif f.dtype != np.uint8:
                     f = f.astype(np.uint8)
-
+                
+                # Ensure 3D array (H, W, C)
                 if f.ndim == 2:
                     f = np.stack([f, f, f], axis=-1)
                 
@@ -774,8 +781,8 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
         # Add AI-generated subtitles
         if settings.get("enable_subtitles"):
             status_placeholder.markdown('<span class="status-badge status-generating">⏳ Generating subtitles...</span>', unsafe_allow_html=True)
-            from subtitle_generator import generate_video_subtitles
-            from subtitles import add_subtitles_to_frames
+            from models.subtitle_generator import generate_video_subtitles
+            from utils.subtitles import add_subtitles_to_frames
             
             # Generate contextual subtitles
             duration = settings["num_frames"] / settings["fps"]
@@ -793,14 +800,14 @@ def generate_video(prompt: str, settings: dict, status_placeholder):
                 st.warning(f"Subtitle generation failed, creating video without subtitles. Error: {sub_e}")
         
         # Save
-        from video import ensure_output_dir, generate_filename, save_video_from_frames
+        from utils.video import ensure_output_dir, generate_filename, save_video_from_frames
         output_dir = ensure_output_dir()
         filename = generate_filename()
         output_path = str(output_dir / filename)
         save_video_from_frames(frames, output_path, fps=settings["fps"])
         
         # Save to history
-       from storage import save_to_history
+        from utils.storage import save_to_history
         save_to_history(prompt, "modelscope", output_path, settings)
         
         status_placeholder.markdown('<span class="status-badge status-ready">✅ Complete!</span>', unsafe_allow_html=True)
@@ -897,7 +904,7 @@ def render_prompt_section(settings):
         # Step 1: Multi-language Translation (TranslateGemma)
         try:
             status_placeholder.markdown('<span class="status-badge status-generating">🌐 Detecting language...</span>', unsafe_allow_html=True)
-            from translator import get_translator
+            from models.translator import get_translator
             translator = get_translator()
             
             translation_result = translator.translate_to_english(
@@ -921,7 +928,7 @@ def render_prompt_section(settings):
         if settings.get("enable_refinement"):
             try:
                 status_placeholder.markdown('<span class="status-badge status-generating">🧠 Analyzing with LLAMA 4 Scout...</span>', unsafe_allow_html=True)
-                from llama_prompt_generator import get_llama_generator
+                from models.llama_prompt_generator import get_llama_generator
                 llama_gen = get_llama_generator()
                 
                 # Analyze prompt
@@ -974,7 +981,7 @@ def render_prompt_section(settings):
         
         # Step 3: Save to Search History
         try:
-            from search_history import save_search
+            from utils.search_history import save_search
             save_search(
                 prompt=original_prompt,
                 language_detected=detected_lang,
@@ -993,12 +1000,12 @@ def render_prompt_section(settings):
             st.session_state.generated_video = video_path
             
             # Save to JSON history
-            from storage import load_history
+            from utils.storage import load_history
             st.session_state.history = load_history()
             
             # Step 5: Save to CSV Storage
             try:
-                from csv_storage import save_video_to_csv
+                from utils.csv_storage import save_video_to_csv
                 source = "cloud" if settings.get("mode") == "Cloud (Faster)" else "local"
                 save_video_to_csv(
                     prompt=original_prompt,
@@ -1231,5 +1238,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
 
