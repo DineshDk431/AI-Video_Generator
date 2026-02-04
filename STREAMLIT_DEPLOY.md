@@ -126,8 +126,4 @@ All automatic, no laptop needed! 🎉
 | `utils/` | ✅ Yes | All .py files |
 | `.streamlit/config.toml` | ✅ Yes | Theme settings |
 | `.gitignore` | ✅ Yes | |
-| `serviceAccountKey.json` | ❌ NO! | Secret file |
-| `.env` | ❌ NO! | Secret file |
-| `.streamlit/secrets.toml` | ❌ NO! | Secret file |
-| `venv/` | ❌ NO! | Local only |
-| `outputs/` | ❌ NO! | Generated files |
+
