@@ -5,9 +5,7 @@ from huggingface_hub import InferenceClient
 from . import HF_TOKEN
 
 
-class LlamaPromptGenerator:
-    """Generate structured video prompts using LLAMA 4 Scout via HuggingFace Inference API."""
-    
+class LlamaPromptGenerator:    
     def __init__(self):
         self.client = None
         # Use LLAMA 4 Scout via Inference API
@@ -16,7 +14,7 @@ class LlamaPromptGenerator:
         self.fallback_model = "meta-llama/Llama-3.3-70B-Instruct"
         
     def _get_client(self):
-        """Get or create the inference client."""
+    
         if self.client is None:
             token = HF_TOKEN or os.getenv("HF_TOKEN")
             if not token:
@@ -29,8 +27,6 @@ class LlamaPromptGenerator:
         text: str,
         progress_callback=None
     ) -> Dict:
-        """
-        Analyze user prompt to extract intent, topic, and emotions.
         
         Args:
             text: User input prompt
@@ -230,3 +226,4 @@ def get_llama_generator() -> LlamaPromptGenerator:
     if _generator is None:
         _generator = LlamaPromptGenerator()
     return _generator
+
